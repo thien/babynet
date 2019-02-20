@@ -344,7 +344,7 @@ class MultiLayerNetwork(object):
         #                       ** START OF YOUR CODE **
         #######################################################################
         for i in range(len(self.neurons)):
-            self._layers[i,0].update_params(learning_rate)
+            self._layers[i][0].update_params(learning_rate)
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
