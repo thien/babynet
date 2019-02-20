@@ -165,7 +165,7 @@ class LinearLayer(Layer):
         #                       ** START OF YOUR CODE **
         #######################################################################
         self._W = xavier_init((n_in, n_out))
-        self._b = xavier_init((n_out,1))
+        self._b = xavier_init((1,n_out))
 
         self._cache_current = None
         self._grad_W_current = None
@@ -192,7 +192,7 @@ class LinearLayer(Layer):
         #                       ** START OF YOUR CODE **
         #######################################################################
         self._cache_current = x
-        return np.matmul(x, self._W) + self._b
+        return np.matmul(x, self._W) + np.repeat(self._b, x.shape[0], 0)
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -214,7 +214,7 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        self._grad_W_current = np.matmul(self.cache_current.T, grad_z)
+        self._grad_W_current = np.matmul(self._cache_current.T, grad_z)
         self._grad_b_current = np.sum(grad_z, axis=0)
         return np.matmul(grad_z, self._W.T)
         #######################################################################
