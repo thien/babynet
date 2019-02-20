@@ -98,7 +98,8 @@ class SigmoidLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        self._cache_current = x
+        return 1 / (1 + np.exp(-x))
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -108,8 +109,8 @@ class SigmoidLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
-
+        return grad_z * (1 / (1 + np.exp(-self._cache_current)) * (1- 1 / (1 + np.exp(-self._cache_current))))
+  
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -127,7 +128,8 @@ class ReluLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        self._cache_current = x
+        return np.maximum(x, 0)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -137,8 +139,8 @@ class ReluLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
-
+        return grad_z * np.maximum(np.minimum(self._cache_current,1),0)
+                         
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -162,8 +164,8 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        self._W = None
-        self._b = None
+        self._W = xavier_init((n_in, n_out))
+        self._b = xavier_init((n_out,1))
 
         self._cache_current = None
         self._grad_W_current = None
@@ -189,7 +191,8 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-
+        self._cache_current = x
+        return np.matmul(x, self._W) + self._b
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -211,7 +214,9 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-
+        self._grad_W_current = np.matmul(self.cache_current.T, grad_z)
+        self._grad_b_current = np.sum(grad_z, axis=0)
+        return np.matmul(grad_z, self._W.T)
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -227,7 +232,8 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-
+        self._W = self._W - learning_rate*self._grad_W_current
+        self._b = self._b - learning_rate*self._grad_b_current
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -256,7 +262,18 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        self._layers = None
+        self._layers = []
+        
+        in_dim = self.input_dim
+        for i in range(len(self.neurons)):
+            out_dim = self.neurons[i]
+            activ = None
+            if(activations[i-1] == 'sigmoid'):
+                activ = SigmoidLayer()
+            elif(activations[i-1] == 'relu'):
+                activ = ReluLayer()
+            self._layers.append([LinearLayer(n_in=in_dim, n_out=out_dim),activ])
+            in_dim = self.neurons[i]
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -275,7 +292,13 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-
+        out = x
+        for i in range(len(self.neurons)):
+            if(self._layers[i][1] != None):
+                out = self._layers[i][1].forward(self._layers[i][0].forward(out))
+            else:
+                out = self._layers[i][0].forward(out)
+        return out
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -298,7 +321,13 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-
+        grad_out = grad_z
+        for i in range(len(self.neurons),-1):
+            if(self._layers[i][1] != None):
+                grad_out = self._layers[i][1].backward(self._layers[i][0].backward(grad_out))
+            else:
+                grad_out = self._layers[i][0].backward(grad_out)
+        return grad_out
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -314,7 +343,8 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-
+        for i in range(len(self.neurons)):
+            self._layers[i,0].update_params(learning_rate)
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -517,7 +547,7 @@ def example_main():
 
     x = dat[:, :4]
     y = dat[:, 4:]
-
+    
     split_idx = int(0.8 * len(x))
 
     x_train = x[:split_idx]
