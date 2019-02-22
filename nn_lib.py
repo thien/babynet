@@ -99,7 +99,7 @@ class SigmoidLayer(Layer):
         #                       ** START OF YOUR CODE **
         #######################################################################
         self._cache_current = x
-        return 1 / (1 + np.exp(-x))
+        return self.sigmoid(x)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -109,8 +109,14 @@ class SigmoidLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        return grad_z * (1 / (1 + np.exp(-self._cache_current)) * (1- 1 / (1 + np.exp(-self._cache_current))))
-  
+        # return grad_z * (1 / (1 + np.exp(-self._cache_current)) * (1- 1 / (1 + np.exp(-self._cache_current))))
+
+        return self.sigmoid(self._cache_current) * (1 - self.sigmoid(self._cache_current))
+
+    @staticmethod
+    def sigmoid(x):
+        return 1/(1 + np.exp(-x))
+
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -139,7 +145,10 @@ class ReluLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        return grad_z * np.maximum(np.minimum(self._cache_current,1),0)
+        # return grad_z * np.maximum(np.minimum(self._cache_current,1),0)
+        grad_z[grad_z >= 0] = 1.0
+        grad_z[grad_z < 0] = 0.0
+        return grad_z
                          
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -322,7 +331,7 @@ class MultiLayerNetwork(object):
         #                       ** START OF YOUR CODE **
         #######################################################################
         grad_out = grad_z
-        for i in range(len(self.neurons),-1):
+        for i in range(len(self.neurons)-1,-1,-1):
             if(self._layers[i][1] != None):
                 grad_out = self._layers[i][1].backward(self._layers[i][0].backward(grad_out))
             else:
@@ -344,6 +353,8 @@ class MultiLayerNetwork(object):
         #                       ** START OF YOUR CODE **
         #######################################################################
         for i in range(len(self.neurons)):
+            # print("updating")
+            # print(self._layers[i][0]._grad_W_current)
             self._layers[i][0].update_params(learning_rate)
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -480,6 +491,9 @@ class Trainer(object):
                 dLoss = self.lossFunction.backward()
                 # backpropagate
                 self.network.backward(dLoss)
+                # for layer in self.network._layers:
+                #     print(layer[0]._grad)
+                # print("-----")
                 # update the weights.
                 self.network.update_params(self.learning_rate)
 
@@ -616,7 +630,7 @@ def example2():
 
     input_dim = 4
     neurons = [16, 3]
-    activations = ["relu", "identity"]
+    activations = ["relu", "sigmoid"]
     net = MultiLayerNetwork(input_dim, neurons, activations)
 
     dat = np.loadtxt("iris.dat")
@@ -635,7 +649,7 @@ def example2():
     trainer = Trainer(
         network=net,
         batch_size=8,
-        nb_epoch=1000,
+        nb_epoch=10,
         learning_rate=0.01,
         loss_fun="cross_entropy",
         shuffle_flag=True,
