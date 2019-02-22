@@ -404,6 +404,11 @@ class Trainer(object):
         #                       ** START OF YOUR CODE **
         #######################################################################
         self._loss_layer = None
+        self.lossFunction = None
+        if self.loss_fun == "cross_entropy":
+            self.lossFunction = CrossEntropyLossLayer()
+        elif self.loss_fun == "MSE":
+            self.lossFunction = MSELossLayer()
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -452,7 +457,34 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
+        for i in range(self.nb_epoch):
+            # setup loss function
+            loss = 0
+            # shuffle the dataset if needed.
+            inputs, targets = input_dataset.copy(), target_dataset.copy()
+    
+            # if self.shuffle_flag:
+            #     inputs, targets = self.shuffle(inputs, targets)
 
+            # split the dataset into batches.
+            inputShape = inputs.shape[0]
+
+            for j in range(0, inputShape, self.batch_size):
+                X = inputs[j:min(j+self.batch_size, inputShape), :]
+                y = targets[j:min(j+self.batch_size, inputShape), :]
+                # train the network
+                guess = self.network(X)
+                # check the loss
+                loss += self.lossFunction(y, guess)
+                # get the loss derivative
+                dLoss = self.lossFunction.backward()
+                # backpropagate
+                self.network.backward(dLoss)
+                # update the weights.
+                self.network.update_params(self.learning_rate)
+
+            print("Epoch [{}/{}]: Loss:{}".format(i+1, self.nb_epoch, loss))
+        print()
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -470,7 +502,8 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-
+        guess = self.network(input_dataset)
+        return self.lossFunction(target_dataset, guess)
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -579,5 +612,45 @@ def example_main():
     print("Validation accuracy: {}".format(accuracy))
 
 
+def example2():
+
+    input_dim = 4
+    neurons = [16, 3]
+    activations = ["relu", "identity"]
+    net = MultiLayerNetwork(input_dim, neurons, activations)
+
+    dat = np.loadtxt("iris.dat")
+    np.random.shuffle(dat)
+
+    x = dat[:, :4]
+    y = dat[:, 4:]
+
+    split_idx = int(0.8 * len(x))
+
+    x_train = x[:split_idx]
+    y_train = y[:split_idx]
+    x_val = x[split_idx:]
+    y_val = y[split_idx:]
+
+    trainer = Trainer(
+        network=net,
+        batch_size=8,
+        nb_epoch=1000,
+        learning_rate=0.01,
+        loss_fun="cross_entropy",
+        shuffle_flag=True,
+    )
+
+    trainer.train(x_train, y_train)
+    print("Train loss = ", trainer.eval_loss(x_train, y_train))
+    print("Validation loss = ", trainer.eval_loss(x_val, y_val))
+
+    preds = net(x_val).argmax(axis=1).squeeze()
+    targets = y_val.argmax(axis=1).squeeze()
+    accuracy = (preds == targets).mean()
+    print("Validation accuracy: {}".format(accuracy))
+
+
 if __name__ == "__main__":
-    example_main()
+    # example_main()
+    example2()
