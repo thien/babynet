@@ -21,6 +21,9 @@ def main():
     # split the dataset
     dataX = torch.stack([torch.Tensor(i) for i in dataX])
     dataY = torch.stack([torch.Tensor(i) for i in dataY])
+    # normalise the data
+    dataX = F.normalize(dataX, p=2, dim=1)
+    dataY = F.normalize(dataY, p=2, dim=1)
     # setup size ratios
     dataSize       = int(dataset.shape[0])
     trainingSize   = int(np.floor(dataSize * trainRatio))
@@ -43,7 +46,7 @@ def main():
         utils.TensorDataset(testX, testY), batch_size=batchsize)
 
     # check for gpu.
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = "cpu"
     print(device)
     # create the model.
 
@@ -59,7 +62,7 @@ def main():
 
             for m in self.modules():
                 if isinstance(m, nn.Linear):
-                    init.kaiming_uniform_(m.weight)
+                    init.xavier_uniform_(m.weight)
 
         def forward(self, x):
             x = F.relu(self.a(x))
@@ -109,6 +112,7 @@ def main():
             data, target = data.to(device), target.to(device)
             output = model(data)
             # sum up batch loss
+            # print(output, target)
             test_loss += loss_function(output, target).item()
 
     test_loss /= len(testloader.dataset)
