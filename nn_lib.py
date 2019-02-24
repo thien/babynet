@@ -424,7 +424,7 @@ class Trainer(object):
         self.lossFunction = None
         if self.loss_fun == "cross_entropy":
             self.lossFunction = CrossEntropyLossLayer()
-        elif self.loss_fun == "MSE":
+        elif self.loss_fun.lower() == "mse":
             self.lossFunction = MSELossLayer()
         #######################################################################
         #                       ** END OF YOUR CODE **
