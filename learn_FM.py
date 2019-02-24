@@ -15,15 +15,15 @@ def main():
     trainRatio = 0.8
     testRatio  = 0.1
     numEpochs  = 50
-    batchsize  = 72
+    batchsize  = 32
 
     dataX, dataY = dataset[:, 0:3], dataset[:, 3:6]
     # split the dataset
     dataX = torch.stack([torch.Tensor(i) for i in dataX])
     dataY = torch.stack([torch.Tensor(i) for i in dataY])
     # normalise the data
-    dataX = F.normalize(dataX, p=2, dim=1)
-    dataY = F.normalize(dataY, p=2, dim=1)
+    dataX = F.normalize(dataX)
+    dataY = F.normalize(dataY)
     # setup size ratios
     dataSize       = int(dataset.shape[0])
     trainingSize   = int(np.floor(dataSize * trainRatio))
@@ -53,9 +53,7 @@ def main():
     class Net(nn.Module):
         def __init__(self, in_size, out_size):
             super(Net, self).__init__()
-            self.a = nn.Linear(in_size, 192)
-            self.b = nn.Linear(192, 128)
-            self.c = nn.Linear(128, 64)
+            self.a = nn.Linear(in_size,64)
             self.d = nn.Linear(64, 32)
             self.e = nn.Linear(32, 8)
             self.f = nn.Linear(8, out_size)
@@ -66,8 +64,6 @@ def main():
 
         def forward(self, x):
             x = F.relu(self.a(x))
-            x = F.relu(self.b(x))
-            x = F.relu(self.c(x))
             x = F.relu(self.d(x))
             x = F.relu(self.e(x))
             x = F.relu(self.f(x))
@@ -112,13 +108,15 @@ def main():
             data, target = data.to(device), target.to(device)
             output = model(data)
             # sum up batch loss
-            # print(output, target)
+            for i in range(len(output)):
+                print(output[i], target[i])
             test_loss += loss_function(output, target).item()
 
     test_loss /= len(testloader.dataset)
 
     print('\nTest set: Average loss: {:.4f}'.format(
         test_loss))
+
         
     #######################################################################
     #                       ** END OF YOUR CODE **
