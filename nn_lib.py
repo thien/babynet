@@ -268,27 +268,21 @@ class MultiLayerNetwork(object):
         self.input_dim = input_dim
         self.neurons = neurons
         self.activations = activations
-        self._layers = []
-        self._activations = []
 
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-
-        # add the input layer
-        self._layers.append(LinearLayer(self.input_dim, self.neurons[0]))
-        # setup the layers of the network.
-        for i in range(1, len(self.neurons)):
-            previous, current = self.neurons[i-1], self.neurons[i]
-            self._layers.append(LinearLayer(previous, current))
-        # add the activations
-        for i in self.activations:
-            if i == "relu":
-                self._activations.append(ReluLayer())
-            if i == "sigmoid":
-                self._activations.append(SigmoidLayer())
-            if i == "identity":
-                self._activations.append(None)
+        self._layers = []
+        
+        for i, activ in enumerate(activations):
+            if i>0:
+                self._layers.append(LinearLayer(neurons[i-1],neurons[i]))
+            else:
+                self._layers.append(LinearLayer(input_dim,neurons[i]))
+            if activ == "sigmoid":
+                self._layers.append(SigmoidLayer())
+            elif activ == "relu":
+                self._layers.append(ReluLayer())
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -308,14 +302,11 @@ class MultiLayerNetwork(object):
         #                       ** START OF YOUR CODE **
         #######################################################################
 
-        for i in range(len(self._layers)):
-            layer = self._layers[i]
-            activation = self._activations[i]
+        for layer in self._layers:
             x = layer.forward(x)
-            if activation is not None:
-                x = activation(x)
+        
         return x
-
+    
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -338,13 +329,10 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        gradient = grad_z
-        for i in range(len(self._layers)-1, -1, -1):
-            activation = self._activations[i]
-            if activation is not None:
-                gradient = activation.backward(gradient)
-            gradient = self._layers[i].backward(gradient)
-        return gradient
+        for layer in self._layers[::-1]:
+            grad_z = layer.backward(grad_z)
+        
+        return grad_z
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -361,7 +349,8 @@ class MultiLayerNetwork(object):
         #                       ** START OF YOUR CODE **
         #######################################################################
         for layer in self._layers:
-            layer.update_params(learning_rate)
+            if type(layer)==LinearLayer:
+                layer.update_params(learning_rate)
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -420,12 +409,13 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        self._loss_layer = None
-        self.lossFunction = None
-        if self.loss_fun == "cross_entropy" or self.loss_fun == "bce":
-            self.lossFunction = CrossEntropyLossLayer()
-        elif self.loss_fun.lower() == "mse":
-            self.lossFunction = MSELossLayer()
+        if self.loss_fun == "mse":
+            self._loss_layer = MSELossLayer()
+        elif self.loss_fun == "cross_entropy" :
+            self._loss_layer = CrossEntropyLossLayer()
+        else :
+            self._loss_layer = None
+
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -449,14 +439,7 @@ class Trainer(object):
         assert len(input_dataset) == len(target_dataset)
 
         p = np.random.permutation(len(input_dataset))
-        inp = input_dataset
-        targ = target_dataset
-        
-        for i in range(len(input_dataset)):
-            input_dataset[i,:] = inp[p[i],:]
-            target_dataset[i] = targ[p[i]] 
-            
-        return (input_dataset, target_dataset)
+        return (input_dataset[p], target_dataset[p])
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -485,7 +468,7 @@ class Trainer(object):
         #                       ** START OF YOUR CODE **
         #######################################################################
 
-        for i in range(self.nb_epoch):
+        for i in range(4): #self.nb_epoch
             # setup loss function
             loss = 0
             # Shuffles the input data (if `shuffle` is True)
@@ -501,9 +484,9 @@ class Trainer(object):
                 # train the network
                 guess = self.network(X)
                 # check the loss
-                loss += self.lossFunction(y, guess)
+                loss += self._loss_layer(y, guess)
                 # get the loss derivative
-                dLoss = self.lossFunction.backward()
+                dLoss = self._loss_layer.backward()
                 # backpropagate
                 self.network.backward(dLoss)
                 # update the weights.
@@ -528,7 +511,7 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        return self.lossFunction(target_dataset, self.network(input_dataset))
+        return self._loss_layer(target_dataset, self.network(input_dataset))
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
