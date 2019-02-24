@@ -484,7 +484,7 @@ class Trainer(object):
                 # train the network
                 guess = self.network(X)
                 # check the loss
-                loss += self._loss_layer(y, guess)
+                loss += self._loss_layer.forward(guess, y)
                 # get the loss derivative
                 dLoss = self._loss_layer.backward()
                 # backpropagate
@@ -511,7 +511,7 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        return self._loss_layer(target_dataset, self.network(input_dataset))
+        return self._loss_layer.forward(self.network(input_dataset), target_dataset)
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
