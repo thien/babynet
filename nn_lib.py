@@ -112,9 +112,9 @@ class SigmoidLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        # return grad_z * (1 / (1 + np.exp(-self._cache_current)) * (1- 1 / (1 + np.exp(-self._cache_current))))
-        z = self.sigmoid(grad_z)
-        return z * (1-z)
+        return grad_z * (1 / (1 + np.exp(-self._cache_current)) * (1- 1 / (1 + np.exp(-self._cache_current))))
+        # z = self.sigmoid(grad_z)
+        # return z * (1-z)
 
     @staticmethod
     def sigmoid(x):
@@ -148,10 +148,10 @@ class ReluLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        # return grad_z * np.maximum(np.minimum(self._cache_current,1),0)
-        grad_z[grad_z >= 0] = 1.0
-        grad_z[grad_z < 0] = 0.0
-        return grad_z
+        return grad_z * np.maximum(np.minimum(self._cache_current,1),0)
+        # grad_z[grad_z >= 0] = 1.0
+        # grad_z[grad_z < 0] = 0.0
+        # return grad_z
                          
         #######################################################################
         #                       ** END OF YOUR CODE **
