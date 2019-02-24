@@ -602,6 +602,7 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
+        assert data.size == self.data.size
 
         out = []
 
@@ -624,7 +625,7 @@ class Preprocessor(object):
 def example_main():
     input_dim = 4
     neurons = [96, 16, 8, 3]
-    activations = ["relu", "relu", "relu", "relu"]
+    activations = ["relu", "relu", "relu", "sigmoid"]
     net = MultiLayerNetwork(input_dim, neurons, activations)
 
     dat = np.loadtxt("iris.dat")
@@ -664,76 +665,6 @@ def example_main():
     print("Validation accuracy: {}".format(accuracy))
 
 
-def example2():
-
-    input_dim = 4
-    neurons = [32, 16, 8, 3]
-    activations = ["relu", "relu", "relu", "sigmoid"]
-    net = MultiLayerNetwork(input_dim, neurons, activations)
-
-    dat = np.loadtxt("iris.dat")
-    np.random.shuffle(dat)
-
-    x = dat[:, :4]
-    y = dat[:, 4:]
-
-    split_idx = int(0.8 * len(x))
-
-    x_train = x[:split_idx]
-    y_train = y[:split_idx]
-    x_val = x[split_idx:]
-    y_val = y[split_idx:]
-
-    trainer = Trainer(
-        network=net,
-        batch_size=32,
-        nb_epoch=10,
-        learning_rate=0.0001,
-        loss_fun="cross_entropy",
-        shuffle_flag=True,
-    )
-
-    trainer.train(x_train, y_train)
-    print("Train loss = ", trainer.eval_loss(x_train, y_train))
-    print("Validation loss = ", trainer.eval_loss(x_val, y_val))
-
-    preds = net(x_val).argmax(axis=1).squeeze()
-    targets = y_val.argmax(axis=1).squeeze()
-    accuracy = (preds == targets).mean()
-    print("Validation accuracy: {}".format(accuracy))
-
-
 if __name__ == "__main__":
     example_main()
-    # example2()
-    # net = 1
-    # trainer = Trainer(
-    #     network=net,
-    #     batch_size=32,
-    #     nb_epoch=1000,
-    #     learning_rate=0.0001,
-    #     loss_fun="cross_entropy",
-    #     shuffle_flag=True,
-    # )
-    # datatrain = [
-    #     [-2,1,3],
-    #     [2,2,1],
-    #     [1,2,2]
-    # ]
-    # # datatarg = [
-    # #     [0],
-    # #     [0],
-    # #     [1]
-    # # ]
 
-    # prep = Preprocessor(datatrain)
-
-    # datatrain = np.array(datatrain)
-
-    # normalized_dataset = prep.apply(datatrain)
-
-    # original_dataset = prep.revert(prep.apply(datatrain))
-
-    # print("raw",datatrain)
-    # # print("norm",normalized_dataset)
-    # print("back",original_dataset)
