@@ -446,13 +446,10 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        index = np.argsort(input_dataset)
-        index = np.random.shuffle(index)
+        assert len(input_dataset) == len(target_dataset)
 
-        shuffled_inputs  =  input_dataset[index][0]
-        shuffled_targets = target_dataset[index][0]
-
-        return (shuffled_inputs, shuffled_targets)
+        p = np.random.permutation(len(input_dataset))
+        return (input_dataset[p], target_dataset[p])
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -553,7 +550,7 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        self.data = data
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -678,5 +675,27 @@ def example2():
 
 
 if __name__ == "__main__":
-    example_main()
+    # example_main()
     # example2()
+    # net = 1
+    # trainer = Trainer(
+    #     network=net,
+    #     batch_size=32,
+    #     nb_epoch=1000,
+    #     learning_rate=0.0001,
+    #     loss_fun="cross_entropy",
+    #     shuffle_flag=True,
+    # )
+    # datatrain = [
+    #     [1,2,3],
+    #     [2,2,1],
+    #     [1,2,2]
+    # ]
+    # datatarg = [
+    #     [0],
+    #     [0],
+    #     [1]
+    # ]
+    # datatarg, datatrain = np.array(datatarg), np.array(datatrain)
+    # k = trainer.shuffle(datatrain,datatarg)
+    # print(k)
