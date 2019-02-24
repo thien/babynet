@@ -98,9 +98,6 @@ class SigmoidLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        # prevent overflow
-        x = np.clip( x, -500, 500 )
-
         self._cache_current = x
         return self.sigmoid(x)
 
@@ -112,7 +109,9 @@ class SigmoidLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        return grad_z * (1 / (1 + np.exp(-self._cache_current)) * (1- 1 / (1 + np.exp(-self._cache_current))))
+        x = self._cache_current
+        d = self.sigmoid(x) * (1 - self.sigmoid(x))
+        return np.multiply(grad_z, d)
 
     @staticmethod
     def sigmoid(x):
@@ -146,10 +145,10 @@ class ReluLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        # return grad_z * np.maximum(np.minimum(self._cache_current,1),0)
-        d = self._cache_current[self._cache_current >= 0] = 1.0
-        d = self._cache_current[self._cache_current < 0] = 0.0
-        return grad_z * d
+        x = self._cache_current
+        d = x[x > 0] = 1.0
+        d = x[x < 0] = 0.0
+        return np.multiply(grad_z, d)
                          
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -546,8 +545,8 @@ class Preprocessor(object):
         #                       ** START OF YOUR CODE **
         #######################################################################
         self.data = data
-        self.min = []
-        self.range = []
+        self.max = np.max(data, axis=0)
+        self.min = np.min(data, axis=0)
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -565,26 +564,7 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        self.min = []
-        self.range = []
-
-        out = []
-
-        for i in range(len(data)):
-            x = data[i]
-
-            data_max = x.max()
-            data_min = x.min()
-            data_range = data_max - data_min
-
-            x = x - data_min
-            x = x / data_range
-
-            self.min.append(data_min)
-            self.range.append(data_range)
-            out.append(x)
-
-        return np.array(out)
+        return np.divide(1.0 * (data - self.min), (self.max - self.min))
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -602,21 +582,7 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        assert data.size == self.data.size
-
-        out = []
-
-        for i in range(len(data)):
-            x = data[i]
-            data_min = self.min[i]
-            data_range = self.range[i]
-
-            x = x * data_range
-            x = x + data_min
-       
-            out.append(x)
-
-        return np.array(out)
+        return np.multiply(1.0 * data, self.max - self.min) + self.min
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -624,8 +590,8 @@ class Preprocessor(object):
 
 def example_main():
     input_dim = 4
-    neurons = [96, 16, 8, 3]
-    activations = ["relu", "relu", "relu", "sigmoid"]
+    neurons = [16, 3]
+    activations = ["relu", "identity"]
     net = MultiLayerNetwork(input_dim, neurons, activations)
 
     dat = np.loadtxt("iris.dat")
@@ -633,7 +599,7 @@ def example_main():
 
     x = dat[:, :4]
     y = dat[:, 4:]
-    
+
     split_idx = int(0.8 * len(x))
 
     x_train = x[:split_idx]
@@ -648,9 +614,9 @@ def example_main():
 
     trainer = Trainer(
         network=net,
-        batch_size=64,
+        batch_size=8,
         nb_epoch=1000,
-        learning_rate=0.0001,
+        learning_rate=0.01,
         loss_fun="cross_entropy",
         shuffle_flag=True,
     )
