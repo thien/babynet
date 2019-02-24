@@ -449,7 +449,14 @@ class Trainer(object):
         assert len(input_dataset) == len(target_dataset)
 
         p = np.random.permutation(len(input_dataset))
-        return (input_dataset[p], target_dataset[p])
+        inp = input_dataset
+        targ = target_dataset
+        
+        for i in range(len(input_dataset)):
+            input_dataset[i,:] = inp[p[i],:]
+            target_dataset[i] = targ[p[i]] 
+            
+        return (input_dataset, target_dataset)
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
