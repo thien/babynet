@@ -422,7 +422,7 @@ class Trainer(object):
         #######################################################################
         self._loss_layer = None
         self.lossFunction = None
-        if self.loss_fun == "cross_entropy":
+        if self.loss_fun == "cross_entropy" or self.loss_fun == "bce":
             self.lossFunction = CrossEntropyLossLayer()
         elif self.loss_fun.lower() == "mse":
             self.lossFunction = MSELossLayer()
@@ -674,8 +674,8 @@ def example2():
     print("Validation accuracy: {}".format(accuracy))
 
 
-if __name__ == "__main__":
-    example_main()
+# if __name__ == "__main__":
+#     example_main()
     # example2()
     # net = 1
     # trainer = Trainer(
