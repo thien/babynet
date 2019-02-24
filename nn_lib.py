@@ -112,11 +112,11 @@ class SigmoidLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        # return grad_z * (1 / (1 + np.exp(-self._cache_current)) * (1- 1 / (1 + np.exp(-self._cache_current))))
-        z = self.sigmoid(self._cache_current)
-        difference = z * (1-z)
-        # print(grad_z.shape, z.shape, difference.shape)
-        return np.dot(grad_z.T, difference)
+        return grad_z * (1 / (1 + np.exp(-self._cache_current)) * (1- 1 / (1 + np.exp(-self._cache_current))))
+        # z = self.sigmoid(self._cache_current)
+        # difference = z * (1-z)
+        # # print(grad_z.shape, z.shape, difference.shape)
+        # return np.dot(grad_z.T,difference)
 
     @staticmethod
     def sigmoid(x):
@@ -272,22 +272,27 @@ class MultiLayerNetwork(object):
         self.input_dim = input_dim
         self.neurons = neurons
         self.activations = activations
+        self._layers = []
+        self._activations = []
 
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        self._layers = []
-        
-        in_dim = self.input_dim
-        for i in range(len(self.neurons)):
-            out_dim = self.neurons[i]
-            activ = None
-            if(activations[i-1] == 'sigmoid'):
-                activ = SigmoidLayer()
-            elif(activations[i-1] == 'relu'):
-                activ = ReluLayer()
-            self._layers.append([LinearLayer(n_in=in_dim, n_out=out_dim),activ])
-            in_dim = self.neurons[i]
+
+        # add the input layer
+        self._layers.append(LinearLayer(self.input_dim, self.neurons[0]))
+        # setup the layers of the network.
+        for i in range(1, len(self.neurons)):
+            previous, current = self.neurons[i-1], self.neurons[i]
+            self._layers.append(LinearLayer(previous, current))
+        # add the activations
+        for i in self.activations:
+            if i == "relu":
+                self._activations.append(ReluLayer())
+            if i == "sigmoid":
+                self._activations.append(SigmoidLayer())
+            if i == "identity":
+                self._activations.append(None)
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -306,13 +311,15 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        out = x
-        for i in range(len(self.neurons)):
-            if(self._layers[i][1] != None):
-                out = self._layers[i][1].forward(self._layers[i][0].forward(out))
-            else:
-                out = self._layers[i][0].forward(out)
-        return out
+
+        for i in range(len(self._layers)):
+            layer = self._layers[i]
+            activation = self._activations[i]
+            x = layer.forward(x)
+            if activation is not None:
+                x = activation(x)
+        return x
+
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -335,13 +342,13 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        grad_out = grad_z
-        for i in range(len(self.neurons)-1,-1,-1):
-            if(self._layers[i][1] != None):
-                grad_out = self._layers[i][1].backward(self._layers[i][0].backward(grad_out))
-            else:
-                grad_out = self._layers[i][0].backward(grad_out)
-        return grad_out
+        gradient = grad_z
+        for i in range(len(self._layers)-1, -1, -1):
+            activation = self._activations[i]
+            if activation is not None:
+                gradient = activation.backward(gradient)
+            gradient = self._layers[i].backward(gradient)
+        return gradient
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -357,10 +364,8 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        for i in range(len(self.neurons)):
-            # print("updating")
-            # print(self._layers[i][0]._grad_W_current)
-            self._layers[i][0].update_params(learning_rate)
+        for layer in self._layers:
+            layer.update_params(learning_rate)
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
