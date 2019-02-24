@@ -53,10 +53,10 @@ def main():
     class Net(nn.Module):
         def __init__(self, in_size, out_size):
             super(Net, self).__init__()
-            self.a = nn.Linear(in_size,64)
-            self.d = nn.Linear(64, 32)
-            self.e = nn.Linear(32, 8)
-            self.f = nn.Linear(8, out_size)
+            self.a = nn.Linear(in_size,20)
+            self.d = nn.Linear(20,10)
+            self.e = nn.Linear(10,7)
+            self.f = nn.Linear(7, out_size)
 
             for m in self.modules():
                 if isinstance(m, nn.Linear):
@@ -66,7 +66,7 @@ def main():
             x = F.relu(self.a(x))
             x = F.relu(self.d(x))
             x = F.relu(self.e(x))
-            x = F.relu(self.f(x))
+            x = self.f(x)
             return x
 
     model = Net(3,3).to(device)
@@ -97,8 +97,8 @@ def main():
             loss = loss_function(output, target)
             valid_loss.append(loss.item())
 
-        print("Epoch:", epoch, "Training Loss: ", np.mean(
-            train_loss), "Valid Loss: ", np.mean(valid_loss))
+        print("Epoch:", epoch, "\tTraining Loss: ", round(np.mean(
+            train_loss),4), "\tValid Loss: ", round(np.mean(valid_loss),4))
 
     # test greatness of model
     model.eval()
@@ -108,8 +108,6 @@ def main():
             data, target = data.to(device), target.to(device)
             output = model(data)
             # sum up batch loss
-            for i in range(len(output)):
-                print(output[i], target[i])
             test_loss += loss_function(output, target).item()
 
     test_loss /= len(testloader.dataset)
