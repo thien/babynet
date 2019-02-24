@@ -443,7 +443,13 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
+        index = np.argsort(input_dataset)
+        index = np.random.shuffle(index)
 
+        shuffled_inputs  =  input_dataset[index][0]
+        shuffled_targets = target_dataset[index][0]
+
+        return (shuffled_inputs, shuffled_targets)
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -538,13 +544,13 @@ class Preprocessor(object):
         (Does not modify the dataset.)
 
         Arguments:
-            - data {np.ndarray} dataset used to determined the parameters for
+            - data {np.ndarray} dataset used to determine the parameters for
             the normalization.
         """
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        self.data = data
+        pass
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -562,7 +568,7 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        
+        return data / np.linalg.norm(data)
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -580,7 +586,7 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-
+        return data * np.linalg.norm(data)
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -589,7 +595,7 @@ class Preprocessor(object):
 def example_main():
     input_dim = 4
     neurons = [16, 3]
-    activations = ["relu", "identity"]
+    activations = ["relu", "sigmoid"]
     net = MultiLayerNetwork(input_dim, neurons, activations)
 
     dat = np.loadtxt("iris.dat")
@@ -669,5 +675,5 @@ def example2():
 
 
 if __name__ == "__main__":
-    # example_main()
-    example2()
+    example_main()
+    # example2()
