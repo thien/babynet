@@ -109,8 +109,8 @@ class SigmoidLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        x = self._cache_current
-        d = self.sigmoid(x) * (1 - self.sigmoid(x))
+        d = self._cache_current
+        d = self.sigmoid(d) * (1 - self.sigmoid(d))
         return np.multiply(grad_z, d)
 
     @staticmethod
@@ -145,9 +145,10 @@ class ReluLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        x = self._cache_current
-        d = x[x > 0] = 1.0
-        d = x[x < 0] = 0.0
+        
+        d = self._cache_current
+        d[d > 0] = 1
+        d[d < 0] = 0
         return np.multiply(grad_z, d)
                          
         #######################################################################
