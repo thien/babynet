@@ -477,19 +477,18 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
+
         for i in range(self.nb_epoch):
             # setup loss function
             loss = 0
-            # shuffle the dataset if needed.
-            inputs, targets = input_dataset.copy(), target_dataset.copy()
-    
-            # if self.shuffle_flag:
-            #     inputs, targets = self.shuffle(inputs, targets)
+            # Shuffles the input data (if `shuffle` is True)
+            if self.shuffle_flag:
+                inputs, targets = self.shuffle(input_dataset, target_dataset)
 
-            # split the dataset into batches.
             inputShape = inputs.shape[0]
-
+            # iterate through the batches.
             for j in range(0, inputShape, self.batch_size):
+                # Splits the dataset into batches of size `batch_size`.
                 X = inputs[j:min(j+self.batch_size, inputShape), :]
                 y = targets[j:min(j+self.batch_size, inputShape), :]
                 # train the network
@@ -500,9 +499,6 @@ class Trainer(object):
                 dLoss = self.lossFunction.backward()
                 # backpropagate
                 self.network.backward(dLoss)
-                # for layer in self.network._layers:
-                #     print(layer[0]._grad)
-                # print("-----")
                 # update the weights.
                 self.network.update_params(self.learning_rate)
 
@@ -525,8 +521,7 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        guess = self.network(input_dataset)
-        return self.lossFunction(target_dataset, guess)
+        return self.lossFunction(target_dataset, self.network(input_dataset))
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -551,6 +546,8 @@ class Preprocessor(object):
         #                       ** START OF YOUR CODE **
         #######################################################################
         self.data = data
+        self.min = []
+        self.range = []
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -568,7 +565,26 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        return data / np.linalg.norm(data)
+        self.min = []
+        self.range = []
+
+        out = []
+
+        for i in range(len(data)):
+            x = data[i]
+
+            data_max = x.max()
+            data_min = x.min()
+            data_range = data_max - data_min
+
+            x = x - data_min
+            x = x / data_range
+
+            self.min.append(data_min)
+            self.range.append(data_range)
+            out.append(x)
+
+        return np.array(out)
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -586,7 +602,20 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        return data * np.linalg.norm(data)
+
+        out = []
+
+        for i in range(len(data)):
+            x = data[i]
+            data_min = self.min[i]
+            data_range = self.range[i]
+
+            x = x * data_range
+            x = x + data_min
+       
+            out.append(x)
+
+        return np.array(out)
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -595,7 +624,7 @@ class Preprocessor(object):
 def example_main():
     input_dim = 4
     neurons = [96, 16, 8, 3]
-    activations = ["relu", "relu", "relu", "sigmoid"]
+    activations = ["relu", "relu", "relu", "relu"]
     net = MultiLayerNetwork(input_dim, neurons, activations)
 
     dat = np.loadtxt("iris.dat")
@@ -618,7 +647,7 @@ def example_main():
 
     trainer = Trainer(
         network=net,
-        batch_size=32,
+        batch_size=64,
         nb_epoch=1000,
         learning_rate=0.0001,
         loss_fun="cross_entropy",
@@ -674,8 +703,8 @@ def example2():
     print("Validation accuracy: {}".format(accuracy))
 
 
-# if __name__ == "__main__":
-#     example_main()
+if __name__ == "__main__":
+    example_main()
     # example2()
     # net = 1
     # trainer = Trainer(
@@ -687,15 +716,24 @@ def example2():
     #     shuffle_flag=True,
     # )
     # datatrain = [
-    #     [1,2,3],
+    #     [-2,1,3],
     #     [2,2,1],
     #     [1,2,2]
     # ]
-    # datatarg = [
-    #     [0],
-    #     [0],
-    #     [1]
-    # ]
-    # datatarg, datatrain = np.array(datatarg), np.array(datatrain)
-    # k = trainer.shuffle(datatrain,datatarg)
-    # print(k)
+    # # datatarg = [
+    # #     [0],
+    # #     [0],
+    # #     [1]
+    # # ]
+
+    # prep = Preprocessor(datatrain)
+
+    # datatrain = np.array(datatrain)
+
+    # normalized_dataset = prep.apply(datatrain)
+
+    # original_dataset = prep.revert(prep.apply(datatrain))
+
+    # print("raw",datatrain)
+    # # print("norm",normalized_dataset)
+    # print("back",original_dataset)
