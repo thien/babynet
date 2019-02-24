@@ -468,7 +468,7 @@ class Trainer(object):
         #                       ** START OF YOUR CODE **
         #######################################################################
 
-        for i in range(4): #self.nb_epoch
+        for i in range(self.nb_epoch):
             # setup loss function
             loss = 0
             # Shuffles the input data (if `shuffle` is True)
