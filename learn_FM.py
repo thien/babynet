@@ -14,7 +14,7 @@ def main():
     #######################################################################
     trainRatio = 0.8
     testRatio  = 0.1
-    numEpochs  = 50
+    numEpochs  = 20
     batchsize  = 32
 
     dataX, dataY = dataset[:, 0:3], dataset[:, 3:6]
@@ -108,6 +108,8 @@ def main():
             data, target = data.to(device), target.to(device)
             output = model(data)
             # sum up batch loss
+            # for i in range(len(output)):
+            #     print(output[i],target[i])
             test_loss += loss_function(output, target).item()
 
     test_loss /= len(testloader.dataset)
