@@ -675,7 +675,7 @@ def example2():
 
 
 if __name__ == "__main__":
-    # example_main()
+    example_main()
     # example2()
     # net = 1
     # trainer = Trainer(
