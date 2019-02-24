@@ -146,10 +146,10 @@ class ReluLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        return grad_z * np.maximum(np.minimum(self._cache_current,1),0)
-        # grad_z[grad_z >= 0] = 1.0
-        # grad_z[grad_z < 0] = 0.0
-        # return grad_z
+        # return grad_z * np.maximum(np.minimum(self._cache_current,1),0)
+        d = self._cache_current[self._cache_current >= 0] = 1.0
+        d = self._cache_current[self._cache_current < 0] = 0.0
+        return grad_z * d
                          
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -597,8 +597,8 @@ class Preprocessor(object):
 
 def example_main():
     input_dim = 4
-    neurons = [16, 3]
-    activations = ["relu", "sigmoid"]
+    neurons = [96, 16, 8, 3]
+    activations = ["relu", "relu", "relu", "sigmoid"]
     net = MultiLayerNetwork(input_dim, neurons, activations)
 
     dat = np.loadtxt("iris.dat")
@@ -621,9 +621,9 @@ def example_main():
 
     trainer = Trainer(
         network=net,
-        batch_size=8,
+        batch_size=32,
         nb_epoch=1000,
-        learning_rate=0.01,
+        learning_rate=0.0001,
         loss_fun="cross_entropy",
         shuffle_flag=True,
     )
@@ -641,8 +641,8 @@ def example_main():
 def example2():
 
     input_dim = 4
-    neurons = [16, 3]
-    activations = ["relu", "sigmoid"]
+    neurons = [32, 16, 8, 3]
+    activations = ["relu", "relu", "relu", "sigmoid"]
     net = MultiLayerNetwork(input_dim, neurons, activations)
 
     dat = np.loadtxt("iris.dat")
@@ -660,9 +660,9 @@ def example2():
 
     trainer = Trainer(
         network=net,
-        batch_size=8,
+        batch_size=32,
         nb_epoch=10,
-        learning_rate=0.01,
+        learning_rate=0.0001,
         loss_fun="cross_entropy",
         shuffle_flag=True,
     )
