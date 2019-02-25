@@ -42,33 +42,20 @@ def illustrate_results_ROI(network, nb_pos=10):
         print("Predicted region: {}".format(prediction[i]))
 
 
-def illustrate_results_FM(network, nb_pos=10):
-    # initiate robot arm
-    robot = RobotArm()
-
+def illustrate_results_FM(network, prep, nb_pos=10):
     data = (
         (np.random.rand(nb_pos + 1, 6) * 2 - 1) * np.pi / 2
     )  # generating 10 cols to match length of dataset, but only the first 3 are used.
+
     data[0, :] = 0
-    # convert to tensor
-    data = torch.Tensor(data)
-    # print("Data:")
-    # print(data)
-    # normalise the data
-    magnitude = data.norm(dim=1,keepdim=True)
-    data = F.normalize(data,dim=1)
-    # evaluate the data with the model
-    results = network(data[1:, 0:3])
-    # store data back
-    # print("results:")
-    # print(results)
+    data = prep.apply(data)
+    x = torch.Tensor(data[1:, 0:3])
+    results = network(x)
+    results = results.detach().numpy()
+    robot = RobotArm()
+
     data[1:, 3:6] = results
-    # revert to un-normalised data
-    data = data * magnitude
-    # print("back to original")
-    # print(data)
-    # convert back to numpy
-    data = data.detach().numpy()
+    data = prep.revert(data)
 
     prediction = data[1:, 3:6]
     angles = np.zeros((nb_pos + 1, 6))

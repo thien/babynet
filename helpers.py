@@ -9,7 +9,7 @@ This file contains helper functions
 used for part 2 and part 3 of the coursework.
 """
 
-def loadTrainingData(dataX,dataY, trainRatio, testRatio, batchsize, normalise=False):
+def loadTrainingData(dataX,dataY, trainRatio, testRatio, batchsize):
     """
     Deals with processing of the dataset.
     """
@@ -17,11 +17,6 @@ def loadTrainingData(dataX,dataY, trainRatio, testRatio, batchsize, normalise=Fa
     # split the dataset
     dataX = torch.stack([torch.Tensor(i) for i in dataX])
     dataY = torch.stack([torch.Tensor(i) for i in dataY])
-
-    if normalise:
-        # normalise the data
-        dataX = F.normalize(dataX, dim=1)
-        dataY = F.normalize(dataY, dim=1)
 
     # setup size ratios
     dataSize       = int(dataX.shape[0])

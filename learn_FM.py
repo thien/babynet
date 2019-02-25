@@ -6,6 +6,9 @@ import torch.nn.init as init
 from torch import optim
 import helpers
 
+from nn_lib import Preprocessor
+
+
 from illustrate import illustrate_results_FM
 
 def main():
@@ -17,17 +20,22 @@ def main():
     
     trainRatio = 0.8
     testRatio  = 0.1
-    numEpochs  = 10
-    batchsize  = 32
+    numEpochs  = 20
+    batchsize  = 64
 
     # shuffle the dataset prior
     np.random.shuffle(dataset)
+
+    # preprocess data
+    prep = Preprocessor(dataset)
+    dataset = prep.apply(dataset)
+
     # retrieve X and Y columns
     X, Y = dataset[:, 0:3], dataset[:, 3:6]
 
     # create loaders
     trainloader, validloader, testloader = helpers.loadTrainingData(
-        X, Y, trainRatio, testRatio, batchsize, normalise=True)
+        X, Y, trainRatio, testRatio, batchsize)
 
     # create the model.
     class Net(nn.Module):
@@ -67,7 +75,7 @@ def main():
     #                       ** END OF YOUR CODE **
     #######################################################################
     # data is normalised in this function
-    illustrate_results_FM(model)
+    illustrate_results_FM(model, prep)
 
 
 if __name__ == "__main__":
