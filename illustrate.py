@@ -1,6 +1,7 @@
 import numpy as np
 from simulator import RobotArm
-
+import torch
+import torch.nn.functional as F
 
 area_map = {
     k: v
@@ -14,19 +15,22 @@ def softmax(x):
     return numer / denom
 
 
-def illustrate_results_ROI(network, prep, nb_pos=10):
+def illustrate_results_ROI(network, nb_pos=10):
 
     data = (
         (np.random.rand(nb_pos + 1, 7) * 2 - 1) * np.pi / 2
     )  # generating 10 cols to match length of dataset, but only the first 3 are used.
     data[0, :] = 0
-    data[1:, :3] = prep.apply(data[1:, :3])
+
+    # convert to tensor
+    data = torch.Tensor(data)
+    # evaluate dataset
     results = network(data[1:, 0:3])
     robot = RobotArm()
-
+    # add back to model
     data[1:, 3:7] = results
-
-    data[1:, :3] = prep.revert(data[1:, :3])
+    # convert back to numpy
+    data = data.detach().numpy()
 
     prediction = [area_map[x] for x in np.argmax(data[1:, 3:7], axis=1)]
 
@@ -38,18 +42,33 @@ def illustrate_results_ROI(network, prep, nb_pos=10):
         print("Predicted region: {}".format(prediction[i]))
 
 
-def illustrate_results_FM(network, prep, nb_pos=10):
+def illustrate_results_FM(network, nb_pos=10):
+    # initiate robot arm
+    robot = RobotArm()
 
     data = (
         (np.random.rand(nb_pos + 1, 6) * 2 - 1) * np.pi / 2
     )  # generating 10 cols to match length of dataset, but only the first 3 are used.
     data[0, :] = 0
-    data = prep.apply(data)
+    # convert to tensor
+    data = torch.Tensor(data)
+    # print("Data:")
+    # print(data)
+    # normalise the data
+    magnitude = data.norm(dim=1,keepdim=True)
+    data = F.normalize(data,dim=1)
+    # evaluate the data with the model
     results = network(data[1:, 0:3])
-    robot = RobotArm()
-
+    # store data back
+    # print("results:")
+    # print(results)
     data[1:, 3:6] = results
-    data = prep.revert(data)
+    # revert to un-normalised data
+    data = data * magnitude
+    # print("back to original")
+    # print(data)
+    # convert back to numpy
+    data = data.detach().numpy()
 
     prediction = data[1:, 3:6]
     angles = np.zeros((nb_pos + 1, 6))
@@ -57,3 +76,6 @@ def illustrate_results_FM(network, prep, nb_pos=10):
     ax = None
     for i in range(nb_pos):
         ax = robot.animate(angles[i, :], angles[i + 1, :], ax, prediction[i, :])
+
+if __name__ == "__main__":
+    illustrate_results_FM(None)
