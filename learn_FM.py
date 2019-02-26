@@ -111,14 +111,14 @@ def evaluate_architecture(model, X, y, prep):
     mse = mean_squared_error(true, prediction)
     rmse = np.sqrt(mse)
     r2 = r2_score(true, prediction, multioutput = 'uniform_average')
-    accuracy = np.average(1 - abs(prediction-true)/1000)
+    accuracy = np.average(1 - np.sqrt((prediction[:,0]-true[:,0])**2+(prediction[:,1]-true[:,1])**2+(prediction[:,2]-true[:,2])**2)/1732)
     
     print("\nTest set: Mean absolute error: {:.3f},  R2 score: {:.3f}".format(mae, r2))
     print("\t  Root mean squared error: {:.3f}\n".format(rmse))
     print("\t  Average Accuracy: {:.6f}\n".format(accuracy))
     print("\t  Note: the accuracy is measured as the euclidian distance") 
-    print("\t        between true and prediction over a maximum error of 1000")
-          
+    print("\t        between true and prediction over a maximum euclidian error")
+    print("\t        of 1732 (1000 in all 3 directions)")    
     
     return mae, mse, rmse, r2
 
