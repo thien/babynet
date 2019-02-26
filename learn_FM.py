@@ -5,11 +5,9 @@ import torch.nn.functional as F
 import torch.nn.init as init
 from torch import optim
 import helpers
-
 from nn_lib import Preprocessor
-
-
 from illustrate import illustrate_results_FM
+
 
 def main():
     dataset = np.loadtxt("FM_dataset.dat")
