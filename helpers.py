@@ -100,10 +100,10 @@ def testModel(model, loss_function, numEpochs, testloader, checkAccuracy=False, 
     if verbose:
         if checkAccuracy:
             accuracy = num_right/ len(testloader.dataset)
-            print('\nTest set: Average loss: {:.4f} \tAccuracy: {:.4f}'.format(
+            print('\nTest set: Average loss (on normalised data): {:.4f} \tAccuracy: {:.4f}'.format(
                 test_loss, accuracy))
         else:
-            print('\nTest set: Average loss: {:.4f}'.format(
+            print('\nTest set: Average loss (on normalised data): {:.4f}'.format(
             test_loss))
 
     return test_loss
