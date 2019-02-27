@@ -6,238 +6,177 @@ import torch.nn.functional as F
 import torch.nn.init as init
 from torch import optim
 import random
-
+import helpers
+from nn_lib import Preprocessor
+#from illustrate import illustrate_results_FM
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from bayes_opt import BayesianOptimization
 
 
-dataset = np.loadtxt("FM_dataset.dat")
+seed = 1337
+np.random.seed(seed)
+torch.manual_seed(seed)
+
+defaults = {
+    'l1':20, 
+    'l2':15, 
+    'l3':10, 
+    'l4':7,
+    'lr':1e-3,
+    'save':False,
+    'epochs':20,
+    'filepath': './Model/fm_model.pt'
+}
 
 class Net(nn.Module):
-	def __init__(self, in_size, out_size,hidden1,hidden2,hidden3):
-		super(Net, self).__init__()
-		self.a = nn.Linear(in_size,int(hidden1))
-		self.d = nn.Linear(int(hidden1),int(hidden2))
-		self.e = nn.Linear(int(hidden2),int(hidden3))
-		self.f = nn.Linear(int(hidden3), out_size)
+    def __init__(self, in_size, out_size, hidd1, hidd2, hidd3, hidd4):
+        super(Net, self).__init__()
+        self.a = nn.Linear(in_size,hidd1)
+        self.d = nn.Linear(hidd1,hidd2)
+        self.e = nn.Linear(hidd2,hidd3)
+        self.g = nn.Linear(hidd3,hidd4)
+        self.f = nn.Linear(hidd4, out_size)
 
-		for m in self.modules():
-			if isinstance(m, nn.Linear):
-				init.xavier_uniform_(m.weight)
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                init.xavier_uniform_(m.weight)
 
-	def forward(self, x):
-		x = F.relu(self.a(x))
-		x = F.relu(self.d(x))
-		x = F.relu(self.e(x))
-		x = self.f(x)
-		return x
+    def forward(self, x):
+        x = F.relu(self.a(x))
+        x = F.relu(self.d(x))
+        x = F.relu(self.e(x))
+        x = F.relu(self.g(x))
+        # we do not have an activation
+        # function on the last layer deliberately.
+        x = self.f(x)
+        return x
 
-def main(hidd1,hidd2,hidd3,learning_rate):
+def blackbox(l1,l2,l3,l4,lr):
+    """
+    Compressed runthrough of training the model.
+    This is used in the BayesianOptimisation function
+    in order to deduce the best hyperparameters during
+    its search. You shouldn't use this to call the
+    model. Use run() instead.
+    """
+    # silly optimiser will make floats of these.
+    l1,l2,l3,l4 = int(l1),int(l2),int(l3),int(l4)
+    # load dataset file
+    dataset = np.loadtxt("FM_dataset.dat")
+    np.random.shuffle(dataset)
+    # setup base parameters
+    trainRatio = 0.8
+    testRatio = 0.1
+    numEpochs = 20
+    batchsize = 64
+    X, Y = dataset[:, 0:3], dataset[:, 3:]
+    xDim, yDim = X.shape[-1], Y.shape[-1]
+    trainloader, validloader, _ = helpers.loadTrainingData(
+        X, Y, trainRatio, testRatio, batchsize)
+    # initiate the model
+    model = Net(xDim, yDim, l1, l2, l3, l4)
+    # set up hyperparameters
+    loss_function = nn.BCEWithLogitsLoss()
+    optimizer = optim.Adam(model.parameters(), lr=lr)
+    # train the model
+    return -helpers.trainModel(
+        model, optimizer, loss_function, 
+        numEpochs, trainloader, validloader, 
+        verbose=False)
 
-	# check for gpu.
-	device = "cpu"
-	print(device)
-	# create the model.
-	dataset = np.loadtxt("FM_dataset.dat")
-	#######################################################################
-	#                       ** START OF YOUR CODE **
-	#######################################################################
-	np.random.shuffle(dataset)
+def optimise():
+    print("Initiating Bayesian Optimisation...")
+    # initiate parameters
+    params = {
+        'l1': (3, 300), 
+        'l2': (3, 300), 
+        'l3': (3, 300),
+        'l4': (3, 300),
+        'lr': (0.0001, 0.001)
+    }
 
-	trainRatio = 0.8
-	testRatio  = 0.1
-	numEpochs  = 500
-	batchsize  = 32
+    # initiate optimiser
+    bayes = BayesianOptimization(
+                f=blackbox,
+                pbounds=params,
+                random_state=seed)
 
-	dataX, dataY = dataset[:, 0:3], dataset[:, 3:6]
-	# split the dataset
-	dataX = torch.stack([torch.Tensor(i) for i in dataX])
-	dataY = torch.stack([torch.Tensor(i) for i in dataY])
-	# normalise the data
-	dataX = F.normalize(dataX)
-	dataY = F.normalize(dataY)
-	# setup size ratios
-	dataSize       = int(dataset.shape[0])
-	trainingSize   = int(np.floor(dataSize * trainRatio))
-	leftoverSize   = int(dataSize - trainingSize)
-	testSize       = int(np.floor(leftoverSize * (testRatio/(1-trainRatio))))
-	validationSize = leftoverSize - testSize
+    # search hyperparameter space
+    bayes.maximize(init_points=4,n_iter=100)
+    print("Finished bayesian optimisation.")
+    # retrieve the best hyperparameter
+    best = bayes.max
 
-	trainX = dataX[:trainingSize]
-	valX   = dataX[trainingSize:trainingSize + validationSize]
-	testX  = dataX[trainingSize + validationSize:]
-	trainY = dataY[:trainingSize]
-	valY   = dataY[trainingSize:trainingSize + validationSize]
-	testY  = dataY[trainingSize + validationSize:]
+    # convert layers variables to ints
+    toIntVariableNames = ['l1', 'l2', 'l3', 'l4']
+    for layer in toIntVariableNames:
+        best['params'][layer] = int(best['params'][layer])
 
-	trainloader = utils.DataLoader(
-		utils.TensorDataset(trainX, trainY), batch_size=batchsize)
-	validloader = utils.DataLoader(
-		utils.TensorDataset(valX, valY), batch_size=batchsize)
-	testloader = utils.DataLoader(
-		utils.TensorDataset(testX, testY), batch_size=batchsize)
+    # initiate parameters
+    arguments = copy.deepcopy(defaults)
+    for key in best:
+        arguments[key] = best[key]
+    arguments['save'] = True
+    arguments['epochs'] = 50
 
-	model = Net(3,3,hidd1,hidd2,hidd3).to(device) #3 hyper parameters for sizes
-
-	loss_function = nn.MSELoss()
-	optimizer     = optim.Adam(model.parameters(),lr = learning_rate) #1 hyper-parameter
-
-	for epoch in range(1, numEpochs):
-		
-		train_loss, valid_loss = [], []
-		# training part
-		model.train()
-		for data, target in trainloader:
-			data, target = data.to(device), target.to(device)
-			optimizer.zero_grad()
-			output = model(data)
-			loss = loss_function(output, target)
-			loss.backward()
-			optimizer.step()
-			train_loss.append(loss.item())
-
-		# evaluation part
-		model.eval()
-
-		for data, target in validloader:
-			data, target = data.to(device), target.to(device)
-			output = model(data)
-			loss = loss_function(output, target)
-			valid_loss.append(loss.item())
-
-		print("Epoch:", epoch, "\tTraining Loss: ", round(np.mean(train_loss),4), "\tValid Loss: ", round(np.mean(valid_loss),4))
-
-	# test greatness of model
-	model.eval()
-	test_loss = 0
-	with torch.no_grad():
-		for data, target in testloader:
-			data, target = data.to(device), target.to(device)
-			output = model(data)
-			# sum up batch loss
-			# for i in range(len(output)):
-			#     print(output[i],target[i])
-			test_loss += loss_function(output, target).item()
-
-	test_loss /= float(len(testloader.dataset))
-
-	print('\nTest set: Average loss: {:.4f}'.format(test_loss))
+    print("Training Model with found parameters.. ", end="")
+    # train the bot with the optimal parameters
+    # and save it.
+    run(verbose=False, showBot=False, args=arguments)
+    print("done.")
 
 
-	return -test_loss #value to maximize	
-	#######################################################################
-	#                       ** END OF YOUR CODE **
-	#######################################################################
+def run(verbose=True, showBot=False, args=defaults):
+    dataset = np.loadtxt("FM_dataset.dat")
+    #######################################################################
+    #                       ** START OF YOUR CODE **
+    #######################################################################
+    np.random.shuffle(dataset)
+    
+    trainRatio = 0.8
+    testRatio = 0.1
+    numEpochs = args['epochs']
+    batchsize = 64
 
+    # split dataset
+    X, Y = dataset[:, 0:3], dataset[:, 3:]
 
-def train_final_model(dataset,optim_params): #train model with optimal parameters 
+    # get input and output dimensions
+    xDim, yDim = X.shape[-1], Y.shape[-1]
 
-	dataX, dataY = dataset[:, 0:3], dataset[:, 3:6]
+    # create dataloaders
+    trainloader, validloader, testloader = helpers.loadTrainingData(
+        X, Y, trainRatio, testRatio, batchsize)
 
-	# split the dataset
-	dataX = torch.stack([torch.Tensor(i) for i in dataX])
-	dataY = torch.stack([torch.Tensor(i) for i in dataY])
+    # initiate the model
+    model = Net(
+        xDim, yDim, args['l1'], args['l2'], args['l3'], args['l4'])
 
-	trainX = F.normalize(dataX)
-	trainY = F.normalize(dataY)
+    # set up hyperparameters
+    loss_function = nn.BCEWithLogitsLoss()
+    optimizer = optim.Adam(model.parameters(), lr=args['lr'])
 
-	numEpochs  = 500
-	batchsize  = 32
+    # train the model
+    val_loss = helpers.trainModel(model, optimizer, loss_function, numEpochs, trainloader, validloader, verbose=verbose)
 
-	device = "cpu"
+    if args['save']:
+        torch.save(model, args['filepath'])
 
-	trainloader = utils.DataLoader(utils.TensorDataset(trainX, trainY), batch_size=batchsize)
+    # test the model
+    helpers.testModel(model, loss_function, numEpochs, testloader, checkAccuracy=True, verbose=verbose)
 
-	np.random.shuffle(dataset)
+    #######################################################################
+    #                       ** END OF YOUR CODE **
+    #######################################################################
+    if showBot:
+        illustrate_results_ROI(model)
 
-	model = Net(3,3,optim_params['hidd1'],optim_params['hidd2'],optim_params['hidd3']).to(device) #3 hyper parameters for sizes
-
-	loss_function = nn.MSELoss()
-	optimizer     = optim.Adam(model.parameters(),lr = optim_params['learning_rate']) #1 hyper-parameter
-
-	for epoch in range(1, numEpochs):
-
-		train_loss, valid_loss = [], []
-		# training part
-		model.train()
-		for data, target in trainloader:
-			data, target = data.to(device), target.to(device)
-
-			optimizer.zero_grad()
-			output = model(data)
-			loss = loss_function(output, target)
-			loss.backward()
-			optimizer.step()
-			train_loss.append(loss.item())
-
-	torch.save(model, './Model/optim_model.pt')
-
-	return(model)
-	# test greatness of model
-
-def test_final_model(dataset):
-
-	dataX, dataY = dataset[:, 0:3], dataset[:, 3:6]
-
-	# split the dataset
-	dataX = torch.stack([torch.Tensor(i) for i in dataX])
-	dataY = torch.stack([torch.Tensor(i) for i in dataY])
-
-	testX = F.normalize(dataX) #normalization of data
-	testY = F.normalize(dataY)
-
-	device = "cpu" #set device 
-	batchsize  = 32 #set batchsize
-
-	testloader = utils.DataLoader(utils.TensorDataset(testX, testY), batch_size=batchsize)
-
-	np.random.shuffle(dataset) #shuffle data
-
-	model = torch.load('./Model/optim_model.pt') #load model previously trained
-	loss_function = nn.MSELoss()
-
-	# test greatness of model
-	model.eval()
-	test_loss = 0
-	with torch.no_grad():
-		for data, target in testloader:
-			data, target = data.to(device), target.to(device)
-			output = model(data)
-			# sum up batch loss
-			# for i in range(len(output)):
-			#     print(output[i],target[i])
-			test_loss += loss_function(output, target).item()
-
-	test_loss /= float(len(testloader.dataset))
-
-	print('\nTest set: Average loss: {:.4f}'.format(test_loss))
-
-	return(True)
+    return val_loss
 
 
 if __name__ == "__main__":
 
-	random.seed(42)
-
-	####	UNCOMMENT PART BELOW TO PROCESS BAYESIAN OPTIMISATION
-	# pbounds = {'hidd1': (3, 30), 'hidd2': (3, 30), 'hidd3': (3, 30), 'learning_rate': (0.0001,0.01)}
-	# optimizer = BayesianOptimization(f=main,pbounds=pbounds,random_state=1)
-	# print("######### STARTING BAYESIAN OPTIMIZATION #######\n\n\n")
-	# optimizer.maximize(init_points=4,n_iter=50)
-	# optim_params = optimizer.max
-	# print("RESULTS :", optim_params)
-	# print("\n\n\n######### END OF OPTIMIZATION ########")
-	####
-
-	####UNCOMMENT PART BELOW TO USE COMPUTED OPTIMAL PARAMETERS
-	# optim_params = {'hidd1':30, 'hidd2':30,'hidd3':30,'learning_rate':0.008719}
-	# final_model = train_final_model(dataset,optim_params)
-	
-	# print(final_model)
-	####
-
-	####TEST IF SAVED MODEL IS WORKING (COMMENT IF OPTIMISING OR TRAINING FINAL VERSION)
-	result = test_final_model(dataset)
-	####
+	optimise()
 
 
 ##### BEST RESULT OBTAINED FOR :
