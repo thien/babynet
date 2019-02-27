@@ -9,6 +9,8 @@ import helpers
 from illustrate import illustrate_results_ROI
 from bayes_opt import BayesianOptimization
 # from keras.utils.np_utils import to_categorical  
+from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
+
 import copy 
 #######################################################################
 #                       ** START OF YOUR CODE **
@@ -17,6 +19,18 @@ import copy
 seed = 1337
 np.random.seed(seed)
 torch.manual_seed(seed)
+
+# default parameters for the model.
+defaults = {
+    'l1':20, 
+    'l2':15, 
+    'l3':10, 
+    'l4':7,
+    'lr':1e-3,
+    'save':False, # determines whether to save the model to file or not.
+    'epochs':20,
+    'filepath': './Model/roi_model.pt'
+}
 
 # set up the model
 class Net(nn.Module):
@@ -40,29 +54,28 @@ class Net(nn.Module):
         x = self.out(x)
         return x
 
+
 def predict_hidden(hidden_dataset):
     # load dataset
     dataset = np.loadtxt(hidden_dataset)
     dataset = torch.Tensor(dataset)
     # split dataset
-    X, Y = dataset[:, 0:3], dataset[:, 3:]
+    X, y = dataset[:, 0:3], dataset[:, 3:]
     # load model
     print("Loading model from:",defaults['filepath'])
     model = torch.load(defaults['filepath'])
     # set to evaluate only
     model.eval()
     # predict Y
-    pred = model(X).detach()
-    # get the predicted output
-    argmax = torch.argmax(pred, dim=1)
-    # onehot the response
-    onehot = np.eye(Y.shape[-1])[argmax.numpy()]
-    # calculate the accuracy
-    right = torch.sum(argmax == torch.argmax(Y, dim=1)).item()
-    accuracy = right / dataset.shape[0]
-    print("Accuracy:", accuracy)
+    pred = model(X).detach().numpy()
+    # onehot the output
+    pred = pred > 0.5
+    pred = pred.astype(float)
+    # print results
+    print_stats(y.numpy(), pred)
     # return what is specified in the question
-    return onehot
+    return pred
+
 
 def blackbox(l1,l2,l3,l4,lr):
     """
@@ -97,7 +110,13 @@ def blackbox(l1,l2,l3,l4,lr):
         numEpochs, trainloader, validloader, 
         verbose=False)
 
+
 def optimise():
+    """
+    Performs a hyperparameter search on the model
+    based on the dataset provided in the assignment.
+
+    """
     print("Initiating Bayesian Optimisation...")
     # initiate parameters
     params = {
@@ -115,7 +134,7 @@ def optimise():
                 random_state=seed)
 
     # search hyperparameter space
-    bayes.maximize(init_points=4,n_iter=5)
+    bayes.maximize(init_points=4,n_iter=30)
     print("Finished bayesian optimisation.")
     # retrieve the best hyperparameter
     best = bayes.max
@@ -137,20 +156,43 @@ def optimise():
     # and save it.
     run(verbose=False, showBot=False, args=arguments)
     print("done.")
+    print("Saved ROI model as:", arguments['filepath'])
+
+
+def evaluate_architecture(model, X, y):
+    """
+    This is separate to learn_FM as the metrics used to 
+    evaluate the model is entirely different.
+    """
+    results = model(X)
+    results = results.detach().numpy()
+    dataset = np.concatenate((X.detach().numpy(), y.detach().numpy()), axis = 1)
+    dataset_pred = np.zeros(dataset.shape)
+    dataset_pred[:, 3:] = results
+    dataset_pred[:, :3] = dataset[:, :3]
+    prediction = dataset_pred[:, 3:]
+    # onehot the output
+    prediction = prediction > 0.5
+    prediction = prediction.astype(float)
+    true = dataset[:, 3:]
+    print_stats(true, prediction)
+
+
+def print_stats(true, prediction):
+    """
+    Prints statistics of the prediction against
+    the true value.
+    """
+    accuracy = accuracy_score(true, prediction)
+    precision = precision_score(true, prediction, average='micro')
+    recall = recall_score(true, prediction, average='micro')
+    f1 = f1_score(true, prediction, average='micro')
+    print("Test Set: Accuracy: {:.3f}  Precision: {:.3f}  Recall: {:.3f}  F1: {:.3f}".format(accuracy,precision,recall,f1))
+
+    # return mae, mse, rmse, r2
 #######################################################################
 #                       ** END OF YOUR CODE **
 #######################################################################
-
-defaults = {
-    'l1':20, 
-    'l2':15, 
-    'l3':10, 
-    'l4':7,
-    'lr':1e-3,
-    'save':False,
-    'epochs':20,
-    'filepath': './Model/roi_model.pt'
-}
 
 def run(verbose=True, showBot=False, args=defaults):
     dataset = np.loadtxt("ROI_dataset.dat")
@@ -189,8 +231,21 @@ def run(verbose=True, showBot=False, args=defaults):
         torch.save(model, args['filepath'])
 
     # test the model
-    helpers.testModel(model, loss_function, numEpochs, testloader, checkAccuracy=True, verbose=verbose)
+    helpers.testModel(model, loss_function, numEpochs, testloader, checkAccuracy=False, verbose=verbose)
 
+    # evaluate model
+    x_store, y_store = [],[]
+    i =0
+    for x,y in testloader:
+        if i < 1: 
+            x_store = np.array(x)
+            y_store = np.array(y)
+        else:
+            np.concatenate((x_store, np.array(x)), axis = 0)
+            np.concatenate((y_store, np.array(y)), axis = 0)
+        i = 1
+
+    evaluate_architecture(model, torch.Tensor(x_store), torch.Tensor(y_store))
     #######################################################################
     #                       ** END OF YOUR CODE **
     #######################################################################
