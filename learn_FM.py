@@ -1,13 +1,22 @@
 import numpy as np
 import torch
+import torch.utils.data as utils
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
 from torch import optim
+import random
 import helpers
 from nn_lib import Preprocessor
-from illustrate import illustrate_results_FM
+#from illustrate import illustrate_results_FM
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from bayes_opt import BayesianOptimization
+
+import copy 
+
+seed = 1337
+np.random.seed(seed)
+torch.manual_seed(seed)
 
 defaults = {
     'l1':128, 
@@ -208,12 +217,13 @@ def evaluate_architecture(model, X, y, prep):
 
 def predict_hidden(dataset):
     # -------  Process data -------- #
+    dataset = np.loadtxt(dataset)
     prep = Preprocessor(dataset)
     dataset = prep.apply(dataset)
     X, Y = torch.Tensor(dataset[:, 0:3]), torch.Tensor(dataset[:, 3:6])
 
     # ------- Instantiate model ----- #
-    model = Net(3,3)
+    model = Net(3,3,237,248,106,115)
 
     # ----- Load our best model ------ #
     model.load_state_dict(torch.load('best_model_reg.pth'))
@@ -232,4 +242,4 @@ def predict_hidden(dataset):
 
 if __name__ == "__main__":
     #main()
-    predict_hidden("FM_dataset.dat")
+    pred = predict_hidden("FM_dataset.dat")
