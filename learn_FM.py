@@ -12,20 +12,20 @@ from nn_lib import Preprocessor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from bayes_opt import BayesianOptimization
 
-import copy 
+import copy
 
 seed = 1337
 np.random.seed(seed)
 torch.manual_seed(seed)
 
 defaults = {
-    'l1':128, 
-    'l2':64, 
-    'l3':32, 
+    'l1':128,
+    'l2':64,
+    'l3':32,
     'l4':8,
     'lr':0.001,
     'save':False,
-    'epochs':50,
+    'epochs':500,
     'filepath': 'best_model_reg.pth'
 }
 
@@ -52,17 +52,17 @@ class Net(nn.Module):
         # function on the last layer deliberately.
         x = self.f(x)
         return x
-    
+
 def main(args = defaults):
     dataset = np.loadtxt("FM_dataset.dat")
     #######################################################################
     #                       ** START OF YOUR CODE **
     #######################################################################
     np.random.shuffle(dataset)
-    
+
     trainRatio = 0.8
     testRatio  = 0.1
-    numEpochs  = 30
+    numEpochs  = 500
     batchsize  = 64
 
     # shuffle the dataset prior
@@ -90,13 +90,13 @@ def main(args = defaults):
     helpers.trainModel(model, optimizer, loss_function, numEpochs, trainloader, validloader)
     # evaluate the model
     helpers.testModel(model, loss_function, numEpochs, testloader)
-    
+
     torch.save(model.state_dict(), 'best_model_reg.pth')
-    
+
     x_store, y_store = [],[]
     i =0
     for x,y in testloader:
-        if i < 1: 
+        if i < 1:
             x_store = np.array(x)
             y_store = np.array(y)
         else:
@@ -127,7 +127,7 @@ def blackbox(l1,l2,l3,l4,lr):
     # setup base parameters
     trainRatio = 0.8
     testRatio = 0.1
-    numEpochs = 30
+    numEpochs = 500
     batchsize = 64
     X, Y = dataset[:, 0:3], dataset[:, 3:]
     xDim, yDim = X.shape[-1], Y.shape[-1]
@@ -140,16 +140,16 @@ def blackbox(l1,l2,l3,l4,lr):
     optimizer = optim.Adam(model.parameters(), lr=lr)
     # train the model
     return - helpers.trainModel(
-        model, optimizer, loss_function, 
-        numEpochs, trainloader, validloader, 
+        model, optimizer, loss_function,
+        numEpochs, trainloader, validloader,
         verbose=False)
 
 def optimise():
     print("Initiating Bayesian Optimisation...")
     # initiate parameters
     params = {
-        'l1': (3, 300), 
-        'l2': (3, 300), 
+        'l1': (3, 300),
+        'l2': (3, 300),
         'l3': (3, 300),
         'l4': (3, 300),
         'lr': (0.0001, 0.001)
@@ -177,7 +177,7 @@ def optimise():
     for key in best:
         arguments[key] = best[key]
     arguments['save'] = True
-    arguments['epochs'] = 50
+    arguments['epochs'] = 500
 
     print("Training Model with found parameters.. ", end="")
     # train the bot with the optimal parameters
@@ -187,7 +187,7 @@ def optimise():
 
 
 def evaluate_architecture(model, X, y, prep):
-    
+
     results = model(X)
     results = results.detach().numpy()
     dataset = np.concatenate((X.detach().numpy(), y.detach().numpy()), axis = 1)
@@ -198,20 +198,20 @@ def evaluate_architecture(model, X, y, prep):
     dataset_pred = prep.revert(dataset_pred)
     prediction = dataset_pred[:, 3:6]
     true = dataset[:, 3:6]
-    
+
     mae = mean_absolute_error(true, prediction)
     mse = mean_squared_error(true, prediction)
     rmse = np.sqrt(mse)
     r2 = r2_score(true, prediction, multioutput = 'uniform_average')
     accuracy = np.average(1 - np.sqrt((prediction[:,0]-true[:,0])**2+(prediction[:,1]-true[:,1])**2+(prediction[:,2]-true[:,2])**2)/1732)
-    
+
     print("\nTest set: Mean absolute error: {:.3f},  R2 score: {:.3f}".format(mae, r2))
     print("\t  Root mean squared error: {:.3f}\n".format(rmse))
     print("\t  Average Accuracy: {:.6f}\n".format(accuracy))
-    print("\t  Note: the accuracy is measured as the euclidian distance") 
+    print("\t  Note: the accuracy is measured as the euclidian distance")
     print("\t        between true and prediction over a maximum euclidian error")
-    print("\t        of 1732 (1000 in all 3 directions)")    
-    
+    print("\t        of 1732 (1000 in all 3 directions)")
+
     return mae, mse, rmse, r2
 
 
